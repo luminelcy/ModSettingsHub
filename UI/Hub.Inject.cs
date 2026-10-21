@@ -17,6 +17,10 @@ namespace ModSettingsHub
         // ---- 注入 ----
         const string NativeButtonPrefix = "P_SettingsSideButtonObject_";
         const string OurButtonPrefix = "XM_ModSettings_";
+
+        // ---- 固定窗口尺寸：锚点/位置跟原生页对齐，尺寸由我们决定 ----
+        static readonly Vector2 OverlaySize = new Vector2(768f, 840f);
+
         readonly HashSet<IntPtr> _hookedNativeButtons = new HashSet<IntPtr>();
         Transform _buttonTemplate;
 
@@ -349,9 +353,8 @@ namespace ModSettingsHub
         }
 
         // ===================== 覆盖层骨架 =====================
-        // ★和"当前正在显示的原生页"逐像素对齐：用世界四角反算 WindowParent 局部矩形，
-        //   不靠固定 768×960 猜（不同页高度不一样，计时器页 840、画质页 0）。
-        void FitOverlayToActiveNativePage()
+        // 只对齐原生页的锚点 / pivot / 位置；尺寸固定为 OverlaySize，不跟随不同页面变化。
+        void AlignOverlayToActiveNativePage()
         {
             try
             {
@@ -370,27 +373,23 @@ namespace ModSettingsHub
                     float area = Mathf.Abs(rt.rect.width * rt.rect.height);
                     if (area > bestArea) { bestArea = area; best = ch; }
                 }
-                if (best == null) return;
-
-                var brt = best.GetComponent<RectTransform>();
-                // ★直接复制当前页的锚点/尺寸/位置（同一个父节点，最稳；世界角反算会因父级偏移算歪）
-                _overlayRt.anchorMin = brt.anchorMin;
-                _overlayRt.anchorMax = brt.anchorMax;
-                _overlayRt.pivot = brt.pivot;
-                if (brt.rect.width >= 100f && brt.rect.height >= 100f)
+                if (best != null)
                 {
-                    _overlayRt.sizeDelta = brt.sizeDelta;
+                    var brt = best.GetComponent<RectTransform>();
+                    // ★只复制对齐方式：锚点 / pivot / 位置。
+                    _overlayRt.anchorMin = brt.anchorMin;
+                    _overlayRt.anchorMax = brt.anchorMax;
+                    _overlayRt.pivot = brt.pivot;
                     _overlayRt.anchoredPosition = brt.anchoredPosition;
+                    LogOnce("align:" + best.name,
+                        "overlay aligned to '" + best.name + "' anchors=" + brt.anchorMin + ".." + brt.anchorMax
+                        + " pivot=" + brt.pivot);
                 }
-                else
-                {
-                    _overlayRt.offsetMin = brt.offsetMin;
-                    _overlayRt.offsetMax = brt.offsetMax;
-                }
-                LogOnce("fit:" + best.name,
-                    "overlay matched '" + best.name + "' size=" + brt.sizeDelta + " pos=" + brt.anchoredPosition);
+
+                // ★尺寸始终固定，跟原生页无关。
+                _overlayRt.sizeDelta = OverlaySize;
             }
-            catch (Exception e) { LogOnce("fiterr", "fit err " + e.Message); }
+            catch (Exception e) { LogOnce("alignerr", "align err " + e.Message); }
         }
 
         void EnsureOverlay()
@@ -427,24 +426,22 @@ namespace ModSettingsHub
                 Transform windowNode = _overlay.transform;
                 Transform listNode = _overlay.transform;
 
-                // 统一布局：768×840 窗口居中；侧栏在窗口内左侧 220（= 用户确认"对！！就是这样"的那版）
-                // 设置场景里直接复制当前原生页的几何（左对齐 768 宽），房间模式才居中
+                // 固定尺寸 OverlaySize；设置场景的对齐方式随后由
+                // AlignOverlayToActiveNativePage() 从当前原生页复制。房间模式（遗留）居中。
                 if (_roomMode)
                 {
                     _overlayRt.anchorMin = new Vector2(0.5f, 0.5f);
                     _overlayRt.anchorMax = new Vector2(0.5f, 0.5f);
                     _overlayRt.pivot = new Vector2(0.5f, 0.5f);
-                    _overlayRt.sizeDelta = new Vector2(768f, 840f);
-                    _overlayRt.anchoredPosition = Vector2.zero;
                 }
                 else
                 {
                     _overlayRt.anchorMin = new Vector2(0f, 0.5f);
                     _overlayRt.anchorMax = new Vector2(0f, 0.5f);
                     _overlayRt.pivot = new Vector2(0f, 0.5f);
-                    _overlayRt.sizeDelta = new Vector2(768f, 840f);
-                    _overlayRt.anchoredPosition = Vector2.zero;
                 }
+                _overlayRt.sizeDelta = OverlaySize;
+                _overlayRt.anchoredPosition = Vector2.zero;
 
                 var bg = _overlay.GetComponent<Image>();
                 var bgSp = GetSprite("BG_Graphics");

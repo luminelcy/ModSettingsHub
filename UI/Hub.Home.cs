@@ -29,7 +29,7 @@ namespace ModSettingsHub
                 if (_overlay == null || _overlayContent == null) return;
 
                 RefreshEntries();                       // 每次打开都重新读注册表/配置（条目可能变了）
-                if (!_roomMode) FitOverlayToActiveNativePage();
+                if (!_roomMode) AlignOverlayToActiveNativePage();
                 CloseModPicker();
                 BuildList();
 
