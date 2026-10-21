@@ -97,6 +97,46 @@
     </Reference>
   </ItemGroup>
 
+  <!-- 游戏自身的 IL2CPP 程序集：用于强类型访问原生设置页/侧边按钮 -->
+  <ItemGroup>
+    <Reference Include="Il2CppViewAssemblyDefinition">
+      <HintPath>$(Il2CppDir)\Il2CppViewAssemblyDefinition.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppBehaviourAssemblyDefinition">
+      <HintPath>$(Il2CppDir)\Il2CppBehaviourAssemblyDefinition.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppDomainAssemblyDefinition">
+      <HintPath>$(Il2CppDir)\Il2CppDomainAssemblyDefinition.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppInstallerAssemblyDefinition">
+      <HintPath>$(Il2CppDir)\Il2CppInstallerAssemblyDefinition.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppR3">
+      <HintPath>$(Il2CppDir)\Il2CppR3.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppZenject">
+      <HintPath>$(Il2CppDir)\Il2CppZenject.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="UnityProcessManager">
+      <HintPath>$(Il2CppDir)\UnityProcessManager.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Il2CppRotaryHeart.SerializableDictionaryLite">
+      <HintPath>$(Il2CppDir)\Il2CppRotaryHeart.SerializableDictionaryLite.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+    <Reference Include="Unity.Localization">
+      <HintPath>$(Il2CppDir)\Unity.Localization.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
   <ItemGroup>
     <EmbeddedResource Include="Sprites\*.png" />
   </ItemGroup>

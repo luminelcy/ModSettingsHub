@@ -60,6 +60,7 @@ namespace ModSettingsHub
                     try { UnityEngine.Object.Destroy(old[i]); } catch { }
                 }
                 _hubButtonImage = null;
+                ClearHubButtonWiring();
 
                 // ★只注入**一颗**【模组】图标：点开是"mod 列表 + 选中项设置"，
                 //   不再给每个 cfg 分类都插一颗（实测 20+ 颗会把左侧列撑到屏幕外）。
@@ -73,32 +74,24 @@ namespace ModSettingsHub
                     if (btn != null)
                     {
                         btn.onClick.RemoveAllListeners();
-                        btn.onClick.AddListener((UnityAction)ToggleSettingsHub);
                         try { btn.transition = Selectable.Transition.None; } catch { }
 
                         var img = btn.GetComponent<Image>();
                         if (img != null)
                         {
-                            // 原生设置左列同款外观：深色圆底 + 白色网格图标（不是红点）
-                            var circle = GetSprite("T_WhiteCircle");
-                            if (circle != null) { img.sprite = circle; img.type = Image.Type.Simple; img.preserveAspect = true; }
-                            img.color = new Color(0f, 24f / 255f, 38f / 255f, 229f / 255f);
+                            // 原生侧边按钮的图标位；InitView 会在 matched/unmatched 间切换。
+                            var grid = GetSprite("XM_ModGrid");
+                            if (grid != null) { img.sprite = grid; img.type = Image.Type.Simple; img.preserveAspect = true; }
+                            img.color = new Color(1f, 1f, 1f, 0.55f);
                             img.raycastTarget = true;
                             _hubButtonImage = img;
-
-                            var icon = new GameObject("Icon");
-                            var irt = icon.AddComponent<RectTransform>();
-                            irt.SetParent(btn.transform, false);
-                            irt.anchorMin = irt.anchorMax = new Vector2(0.5f, 0.5f);
-                            irt.pivot = new Vector2(0.5f, 0.5f);
-                            irt.sizeDelta = new Vector2(20f, 20f);
-                            irt.anchoredPosition = Vector2.zero;
-                            var iimg = icon.AddComponent<Image>();
-                            var grid = GetSprite("XM_ModGrid");
-                            if (grid != null) { iimg.sprite = grid; iimg.preserveAspect = true; }
-                            iimg.color = Color.white;
-                            iimg.raycastTarget = false;
                         }
+
+                        // 复用原生 View：hover Tips / 点击反馈 / 选中态（用我们自己的 bool）
+                        TryWireNativeSideButton(go, _buttonTemplate);
+
+                        // 点击放在最后，避免被 InitView/InitBehaviour 的初始化覆盖
+                        btn.onClick.AddListener((UnityAction)ToggleSettingsHub);
                         try
                         {
                             var tip = go.transform.Find("Tips/CommonLocalizeText/Text (TMP)");
@@ -110,6 +103,7 @@ namespace ModSettingsHub
                 }
 
                 ResizeSideColumn();
+                HighlightButton();
                 LogOnce("injected", "injected hub button; sideButtons size=" + RtSize(SideButtons)
                     + " native=" + CountNativeButtons() + " entries=" + Entries.Count);
             }
@@ -194,7 +188,7 @@ namespace ModSettingsHub
                     if (ob == null) continue;
                     IntPtr p = ob.Pointer;
                     if (p == IntPtr.Zero || !_hookedNativeButtons.Add(p)) continue;
-                    btn.onClick.AddListener((UnityAction)HideOverlay);
+                    btn.onClick.AddListener((UnityAction)OnNativeSideButtonClicked);
                 }
             }
             catch (Exception e) { LogOnce("hooknative", "native hook err " + e.Message); }
@@ -204,6 +198,9 @@ namespace ModSettingsHub
         {
             _hookedNativeButtons.Clear();
             _buttonTemplate = null;
+            _hubButtonImage = null;
+            ClearHubButtonWiring();
+            ClearNativeHubState();
         }
 
         // ===================== 点击 =====================
@@ -238,6 +235,9 @@ namespace ModSettingsHub
         {
             try
             {
+                // 原生状态机模式：关闭按钮 = 切回上一个原生页，显隐交给原生 UpdateWindow
+                if (!_roomMode && CloseHubNative()) return;
+
                 MelonLogger.Msg("hub: close/hide window");
                 CancelHotkeyCapture();
                 CloseModPicker();
@@ -255,6 +255,7 @@ namespace ModSettingsHub
 
         void ResetOverlay()
         {
+            ClearNativeHubState();
             InputLocked = false;
             HotkeyStore.Suspended = false;
             if (_hiddenRoomCanvases.Count > 0) HideRoomUi(false);
@@ -285,7 +286,8 @@ namespace ModSettingsHub
             {
                 if (_hubButtonImage == null) return;
                 bool on = _openId != null;
-                _hubButtonImage.color = on ? new Color(0.05f, 0.18f, 0.24f, 0.95f) : new Color(0f, 24f / 255f, 38f / 255f, 229f / 255f);
+                _hubButtonImage.color = on ? Color.white : new Color(1f, 1f, 1f, 0.55f);
+                SetHubButtonSelected(on);
             }
             catch { }
         }
